@@ -220,12 +220,15 @@ export class SonicEmulator {
     const self = this.getSelf?.();
     if (!local || !self || !local.visible) return;
 
+    const localX = local.x - local.cameraX;
+    const localY = local.y - local.cameraY;
+
     // Players 2–4 get their assigned color drawn over the native blue Sonic.
     if (self.slot > 1) {
       drawPlayerGhost(
         context,
-        local.x - local.cameraX,
-        local.y - local.cameraY,
+        localX,
+        localY,
         self.color,
         self.name,
         Boolean(local.status & 1),
@@ -233,6 +236,9 @@ export class SonicEmulator {
         this.spriteVariants.get(self.color),
         this.spriteFacingLeft
       );
+    } else {
+      // Player 1 keeps the game's native blue sprite but still gets a live tag.
+      drawNameTag(context, self.name, localX, localY - 23, self.color);
     }
 
     for (const player of this.getPlayers?.() ?? []) {
@@ -399,7 +405,7 @@ function drawPlayerGhost(context, x, y, color, name, facingLeft, localSkin, spri
   context.stroke();
   context.drawImage(sprite, -20, -24);
   context.restore();
-  drawNameTag(context, name, x, y - 23);
+  drawNameTag(context, name, x, y - 23, color);
 }
 
 function drawGhostSonic(context, x, y, color, name, facingLeft, localSkin) {
@@ -488,19 +494,23 @@ function drawGhostSonic(context, x, y, color, name, facingLeft, localSkin) {
   context.stroke();
   context.restore();
 
-  drawNameTag(context, name, x, y - 21);
+  drawNameTag(context, name, x, y - 21, color);
 }
 
-function drawNameTag(context, name, x, y) {
+export function drawNameTag(context, name, x, y, color) {
   context.save();
-  context.font = "bold 7px system-ui, sans-serif";
+  context.font = "bold 8px system-ui, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "bottom";
-  context.lineWidth = 2.5;
+  const label = String(name ?? "").slice(0, 16);
+  const halfWidth = Math.ceil(context.measureText(label).width / 2) + 3;
+  const labelX = Math.max(halfWidth, Math.min(VIEW_WIDTH - halfWidth, Math.round(x)));
+  const labelY = Math.max(10, Math.min(VIEW_HEIGHT - 2, Math.round(y)));
+  context.lineWidth = 3;
   context.strokeStyle = "#061329";
-  context.strokeText(name, Math.round(x), Math.round(y));
-  context.fillStyle = "white";
-  context.fillText(name, Math.round(x), Math.round(y));
+  context.strokeText(label, labelX, labelY);
+  context.fillStyle = color;
+  context.fillText(label, labelX, labelY);
   context.restore();
 }
 
@@ -611,7 +621,7 @@ function drawEdgeMarker(context, x, y, deltaX, player) {
   context.stroke();
   context.font = "bold 7px system-ui, sans-serif";
   context.textAlign = direction < 0 ? "left" : "right";
-  context.fillStyle = "white";
+  context.fillStyle = player.color ?? colorForSlot(player.slot);
   context.strokeStyle = "#061329";
   const label = `${player.name} ${Math.abs(Math.round(deltaX))}px`;
   context.strokeText(label, direction < 0 ? 9 : -9, -7);

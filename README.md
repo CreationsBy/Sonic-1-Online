@@ -47,7 +47,7 @@ This is asynchronous cooperative multiplayer, not traditional shared-input Genes
 - The client reads the Genesis Plus GX save-state buffer four to six times a second, using the lower rate on mobile. That buffer begins with a 16-byte core signature followed by the Genesis 64 KiB work RAM.
 - Sonic 1's RAM fields provide Sonic's world X/Y position, camera X/Y, current zone/act, game mode, and facing bit.
 - Those small values go through WebSocket. A teammate on the same act is drawn as a colored Sonic figure at `teammate world position - local camera position`. Off-screen teammates get an edge marker. Players in another act remain visible in the player-status panel.
-- Player 1 is blue, Player 2 red, Player 3 yellow, and Player 4 green. The overlay samples the emulator's current Sonic sprite, keeps its face/gloves/shoes, and recolors the blue fur. Players 2–4 also get that assigned overlay drawn over their local blue Sonic. A small vector Sonic-style marker is the fallback when a browser blocks WebGL readback.
+- Player 1 is blue, Player 2 red, Player 3 yellow, and Player 4 green. The overlay samples the emulator's current Sonic sprite, keeps its face/gloves/shoes, and recolors the blue fur. Players 2–4 also get that assigned overlay drawn over their local blue Sonic. Every Sonic has a matching-color display name anchored above it and following the same live screen position. A small vector Sonic-style marker is the fallback when a browser blocks WebGL readback.
 
 The relevant code is split by responsibility:
 
