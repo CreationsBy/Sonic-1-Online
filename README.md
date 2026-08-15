@@ -17,13 +17,13 @@ Open `http://localhost:8080` in each browser. For another device on the same net
 
 The full site entry point is `public/index.html`. The repository also has a root `index.html` that redirects there when Pages is configured to publish from the branch root.
 
-The recommended setup is the included `.github/workflows/pages.yml` workflow:
+To share the static site itself, use the included `.github/workflows/pages.yml` workflow:
 
 1. Push the repository to a GitHub repository whose default branch is `main`.
 2. Open **Settings â†’ Pages** and set **Source** to **GitHub Actions**.
 3. The workflow publishes the contents of `public/`, so `public/index.html` becomes the site's root page automatically.
-4. Deploy the Node application (`npm start`) to an HTTPS-capable Node host. GitHub Pages is static and cannot run `src/server.js` or WebSockets.
-5. Open the Pages site and enter that Node host in **Multiplayer server URL**. It is saved on that browser. You can also set `window.SONIC_SERVER_URL` in `public/config.js`, or share a URL such as `https://username.github.io/repository/?server=https://your-node-host.example.com`.
+
+There is no visitor-facing server configuration field. GitHub Pages can share the interface and client files, but it is a static host and cannot run the lobby/WebSocket process. Running `npm start` serves the client and multiplayer backend together with no configuration. If a Pages deployment is later connected to a separately hosted backend, the site owner sets `window.SONIC_SERVER_URL` once in `public/config.js`; visitors are not asked for an address.
 
 Do not put the ROM in `public/` or the Pages artifact. Every player continues to select their own local copy.
 

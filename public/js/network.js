@@ -102,13 +102,7 @@ export class LobbyConnection extends EventTarget {
 }
 
 export function getConfiguredServerUrl() {
-  let stored = "";
-  try {
-    stored = localStorage.getItem("sonic-1-online-server") || "";
-  } catch {
-    // A configured global still works when browser storage is unavailable.
-  }
-  return String(window.SONIC_SERVER_URL || stored).trim();
+  return String(window.SONIC_SERVER_URL || "").trim();
 }
 
 export function resolveSocketUrl() {

@@ -11,7 +11,7 @@ const elements = Object.fromEntries(
     "rom-drop", "rom-status", "room-code", "create-room", "join-room", "setup-error",
     "lobby-code", "lobby-players", "lobby-hint", "start-game", "copy-code", "game-code",
     "connection-state", "launch-cover", "countdown", "toast-stack",
-    "device-note", "server-config", "server-url", "save-server", "rotate-hint",
+    "device-note", "rotate-hint",
     "team-hud", "spectator-view", "spectator-name", "spectator-target", "spectator-frame", "spectator-empty"
   ].map((id) => [id, document.getElementById(id)])
 );
@@ -57,9 +57,7 @@ const emulator = new SonicEmulator({
 boot();
 
 async function boot() {
-  applyServerQueryParameter();
   configureDeviceUi();
-  configureStaticHostingUi();
 
   try {
     const response = await fetch("/api/config");
@@ -81,7 +79,6 @@ async function boot() {
   elements["join-room"].addEventListener("click", () => enterLobby("join"));
   elements["start-game"].addEventListener("click", () => connection.send("start"));
   elements["copy-code"].addEventListener("click", copyLobbyCode);
-  elements["save-server"].addEventListener("click", saveServerUrl);
   elements["spectator-target"].addEventListener("change", () => {
     selectSpectatorTarget(elements["spectator-target"].value);
   });
@@ -457,6 +454,7 @@ function getSelf() {
 
 function refreshButtons() {
   const backendReady = !requiresExternalServer() || Boolean(getConfiguredServerUrl());
+  if (!backendReady) showSetupError("Online lobbies are unavailable on this static copy of the site.");
   const ready = Boolean(
     backendReady && elements["player-name"].value.trim() && app.romFile && !app.validatingRom && !app.busy
   );
@@ -471,57 +469,6 @@ function configureDeviceUi() {
     ? "Apple touch device detected — Genesis D-pad, A, B, C, and Start controls will appear in-game."
     : "Touch device detected — Genesis D-pad, A, B, C, and Start controls will appear in-game.";
   elements["rotate-hint"].classList.remove("hidden");
-}
-
-function configureStaticHostingUi() {
-  if (!requiresExternalServer()) return;
-  elements["server-config"].classList.remove("hidden");
-  elements["server-url"].value = getConfiguredServerUrl();
-  if (!getConfiguredServerUrl()) {
-    showSetupError("GitHub Pages needs the public URL of your separately deployed multiplayer server.");
-  }
-}
-
-function applyServerQueryParameter() {
-  const fromQuery = new URLSearchParams(location.search).get("server");
-  if (!fromQuery) return;
-  try {
-    const validated = validateServerUrl(fromQuery);
-    window.SONIC_SERVER_URL = validated;
-    storageSet("sonic-1-online-server", validated);
-  } catch {
-    // The visible server field lets the user correct an invalid query value.
-  }
-}
-
-function saveServerUrl() {
-  try {
-    const value = validateServerUrl(elements["server-url"].value);
-    window.SONIC_SERVER_URL = value;
-    storageSet("sonic-1-online-server", value);
-    elements["server-url"].value = value;
-    showSetupError("");
-    notify("Multiplayer server saved on this device.", "success");
-    refreshButtons();
-  } catch (error) {
-    showSetupError(error.message);
-  }
-}
-
-function validateServerUrl(value) {
-  let url;
-  try {
-    url = new URL(String(value).trim());
-  } catch {
-    throw new Error("Enter the full multiplayer server URL, including https://.");
-  }
-  if (!["https:", "http:", "wss:", "ws:"].includes(url.protocol)) {
-    throw new Error("Use an HTTPS or WSS multiplayer server URL.");
-  }
-  if (location.protocol === "https:" && ["http:", "ws:"].includes(url.protocol)) {
-    throw new Error("An HTTPS GitHub Page requires an HTTPS or WSS server URL.");
-  }
-  return url.origin + (url.pathname === "/" ? "" : url.pathname.replace(/\/$/, ""));
 }
 
 function requiresExternalServer() {

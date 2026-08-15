@@ -227,20 +227,6 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
   line-height: 1.45;
 }
 
-.server-config {
-  margin-top: 18px;
-  padding: 14px;
-  border: 1px solid rgba(255, 216, 62, 0.32);
-  border-radius: 12px;
-  background: rgba(255, 216, 62, 0.06);
-}
-
-.server-config .field-label { color: var(--yellow); }
-.server-row { display: flex; align-items: stretch; gap: 9px; }
-.server-row .text-field { margin: 0; }
-.server-row .secondary-button { flex: none; min-width: 86px; }
-.server-config > small { display: block; margin-top: 9px; color: #94b1d4; font-size: 0.65rem; line-height: 1.45; }
-
 .lobby-panel { margin-top: 18px; }
 .lobby-topline { justify-content: space-between; }
 .code-badge { padding: 8px 14px; color: white; border: 1px solid rgba(255, 216, 62, 0.45); border-radius: 12px; background: rgba(255, 216, 62, 0.09); }
@@ -383,9 +369,7 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
   .hero h1 { font-size: clamp(1.75rem, 8.5vw, 2.2rem); white-space: nowrap; }
   .browse-pill { display: none; }
   .join-row { flex-direction: column; }
-  .server-row { flex-direction: column; }
-  .server-row .text-field, .text-field, .code-field { min-height: 50px; font-size: 16px; }
-  .server-row .secondary-button { width: 100%; }
+  .text-field, .code-field { min-height: 50px; font-size: 16px; }
   .code-field { width: 100%; }
   .lobby-players, .team-hud { grid-template-columns: 1fr; }
   .lobby-footer { align-items: stretch; flex-direction: column; }
