@@ -1,0 +1,38 @@
+name: Deploy static client to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Configure owner-managed multiplayer service
+        env:
+          SONIC_SERVER_URL: ${{ vars.SONIC_SERVER_URL }}
+        run: node -e "require('node:fs').writeFileSync('public/config.js', 'window.SONIC_SERVER_URL = ' + JSON.stringify(process.env.SONIC_SERVER_URL || '') + ';\\n')"
+      - name: Upload static client
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
