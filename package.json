@@ -1,9 +1,9 @@
 {
-  "name": "sonic-online-race",
+  "name": "sonic-1-online",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Four-player, asynchronous Sonic 1 race rooms with live player ghosts.",
+  "description": "Four-player cooperative Sonic 1 rooms with live teammate ghosts and spectating.",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
