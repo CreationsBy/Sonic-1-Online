@@ -1,0 +1,15 @@
+# GitHub Pages runs Jekyll when the repository is published directly from a
+# branch. The ROM is binary data with a legacy .md filename, so it must never
+# be parsed as Markdown or copied into the public site.
+exclude:
+  - rom
+  - node_modules
+  - src
+  - test
+  - package.json
+  - package-lock.json
+  - README.md
+  - .github
+
+include:
+  - public/.nojekyll

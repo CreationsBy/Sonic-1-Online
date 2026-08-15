@@ -27,6 +27,8 @@ The recommended setup is the included `.github/workflows/pages.yml` workflow:
 
 Do not put the ROM in `public/` or the Pages artifact. Every player continues to select their own local copy.
 
+If Pages is instead configured to **Deploy from a branch**, GitHub runs Jekyll against the repository root. The included `_config.yml` excludes `rom/` so Jekyll neither interprets the binary ROM's legacy `.md` filename nor publishes the ROM. The `public/.nojekyll` marker is also included in the static Actions artifact. GitHub Actions remains the recommended Pages source.
+
 Each player must:
 
 1. Choose a display name.
