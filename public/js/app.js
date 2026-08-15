@@ -1,5 +1,5 @@
 import { SonicEmulator, formatTelemetryStage } from "./emulator.js";
-import { LobbyConnection, getConfiguredServerUrl } from "./network.js";
+import { LobbyConnection } from "./network.js";
 import { MAX_PLAYERS, SONIC_ROM, colorForSlot } from "./protocol-constants.js";
 import { applyDeviceClasses } from "./device.js";
 
@@ -120,6 +120,9 @@ async function validateRom(file) {
 
   try {
     if (file.size !== app.config.rom.size) throw new Error(`Expected a ${formatBytes(app.config.rom.size)} Sonic 1 ROM.`);
+    if (!globalThis.crypto?.subtle) {
+      throw new Error("ROM loading requires HTTPS or the local npm server; do not open index.html directly as a file.");
+    }
     const hashBuffer = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
     const hash = [...new Uint8Array(hashBuffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
     if (hash !== app.config.rom.sha256) throw new Error(`This is not the supported ${app.config.rom.title} ROM.`);
@@ -127,8 +130,9 @@ async function validateRom(file) {
     app.romFile = file;
     app.romHash = hash;
     elements["rom-drop"].classList.add("valid");
-    elements["rom-status"].textContent = `${file.name} • verified`;
+    elements["rom-status"].textContent = `Sonic 1 ready • ${formatBytes(file.size)} verified`;
     elements["setup-error"].textContent = "";
+    notify("Sonic 1 ROM loaded successfully.", "success");
   } catch (error) {
     elements["rom-drop"].classList.add("invalid");
     elements["rom-status"].textContent = error.message;
@@ -453,10 +457,8 @@ function getSelf() {
 }
 
 function refreshButtons() {
-  const backendReady = !requiresExternalServer() || Boolean(getConfiguredServerUrl());
-  if (!backendReady) showSetupError("Online lobbies are unavailable on this static copy of the site.");
   const ready = Boolean(
-    backendReady && elements["player-name"].value.trim() && app.romFile && !app.validatingRom && !app.busy
+    elements["player-name"].value.trim() && app.romFile && !app.validatingRom && !app.busy
   );
   elements["create-room"].disabled = !ready;
   elements["join-room"].disabled = !ready || !/^\d{4}$/.test(elements["room-code"].value);
@@ -469,10 +471,6 @@ function configureDeviceUi() {
     ? "Apple touch device detected — Genesis D-pad, A, B, C, and Start controls will appear in-game."
     : "Touch device detected — Genesis D-pad, A, B, C, and Start controls will appear in-game.";
   elements["rotate-hint"].classList.remove("hidden");
-}
-
-function requiresExternalServer() {
-  return location.hostname.endsWith("github.io") || location.protocol === "file:";
 }
 
 function setConnectionState(state) {
