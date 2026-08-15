@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#071c4a">
+    <title>Sonic 1 Online</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="speed-lines" aria-hidden="true"></div>
+
+    <main id="menu-view" class="page-shell">
+      <header class="hero">
+        <div class="wing wing-left" aria-hidden="true"></div>
+        <div class="hero-mark" aria-hidden="true">S</div>
+        <div class="wing wing-right" aria-hidden="true"></div>
+        <p class="eyebrow">Genesis • private race rooms</p>
+        <h1>Sonic 1 Online</h1>
+        <p class="hero-copy">Four independent games. One shared course.</p>
+      </header>
+
+      <section id="setup-card" class="panel setup-panel" aria-labelledby="setup-title">
+        <div class="panel-heading">
+          <span class="step-number">01</span>
+          <div>
+            <p class="kicker">Player setup</p>
+            <h2 id="setup-title">Get race-ready</h2>
+          </div>
+        </div>
+
+        <label class="field-label" for="player-name">Display name</label>
+        <input id="player-name" class="text-field" type="text" maxlength="16" autocomplete="nickname" placeholder="Your name">
+
+        <label id="rom-drop" class="rom-drop" for="rom-file">
+          <input id="rom-file" type="file" accept=".md,.bin,.gen,application/octet-stream">
+          <span class="cartridge" aria-hidden="true"><i></i></span>
+          <span class="drop-copy">
+            <strong>Load Sonic 1 ROM</strong>
+            <small id="rom-status">Required • stays in your browser</small>
+          </span>
+          <span class="browse-pill">Browse</span>
+        </label>
+
+        <p id="device-note" class="device-note hidden"></p>
+
+        <div id="server-config" class="server-config hidden">
+          <label class="field-label" for="server-url">Multiplayer server URL</label>
+          <div class="server-row">
+            <input id="server-url" class="text-field" type="url" inputmode="url" autocomplete="url" placeholder="https://your-node-server.example.com">
+            <button id="save-server" class="secondary-button" type="button">Save</button>
+          </div>
+          <small>GitHub Pages hosts the screen; this URL hosts private lobbies and reconnect checkpoints.</small>
+        </div>
+
+        <div class="room-actions">
+          <button id="create-room" class="primary-button" type="button" disabled>
+            <span>Create private lobby</span><b>→</b>
+          </button>
+          <div class="or"><span>or join with code</span></div>
+          <div class="join-row">
+            <input id="room-code" class="code-field" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" aria-label="Four digit room code" placeholder="0000">
+            <button id="join-room" class="secondary-button" type="button" disabled>Join lobby</button>
+          </div>
+        </div>
+
+        <p id="setup-error" class="form-error" role="alert"></p>
+      </section>
+
+      <section id="lobby-card" class="panel lobby-panel hidden" aria-labelledby="lobby-title">
+        <div class="lobby-topline">
+          <div>
+            <p class="kicker">Private lobby</p>
+            <h2 id="lobby-title">Race crew</h2>
+          </div>
+          <button id="copy-code" class="code-badge" type="button" title="Copy lobby code">
+            <small>Lobby code</small>
+            <strong id="lobby-code">----</strong>
+          </button>
+        </div>
+        <div id="lobby-players" class="lobby-players"></div>
+        <div class="lobby-footer">
+          <p id="lobby-hint">Waiting for the host to start…</p>
+          <button id="start-race" class="primary-button compact hidden" type="button">Start race <b>→</b></button>
+        </div>
+      </section>
+
+      <footer class="legal-note">Bring your own legally obtained Sonic the Hedgehog ROM. ROM data is never uploaded.</footer>
+    </main>
+
+    <main id="game-view" class="game-view hidden">
+      <header class="game-bar">
+        <div class="game-brand"><span>S</span><strong>Sonic 1 Online</strong></div>
+        <div class="room-chip">Room <b id="game-code">----</b></div>
+        <div id="connection-state" class="connection-state"><i></i><span>Connected</span></div>
+      </header>
+
+      <div class="game-layout">
+        <section id="game-shell" class="game-shell" aria-label="Sonic the Hedgehog emulator">
+          <div id="game"></div>
+          <canvas id="ghost-layer" aria-label="Other players"></canvas>
+          <div id="launch-cover" class="launch-cover">
+            <p>Race begins in</p>
+            <strong id="countdown">3</strong>
+            <small>Every player runs their own game</small>
+            <small id="rotate-hint" class="rotate-hint hidden">Rotate to landscape for the best touch controls.</small>
+          </div>
+        </section>
+
+        <aside class="race-panel" aria-labelledby="race-status-title">
+          <div class="race-heading">
+            <p class="kicker">Live course</p>
+            <h2 id="race-status-title">Race status</h2>
+          </div>
+          <div id="race-hud" class="race-hud"></div>
+          <div class="race-legend">
+            <span><i class="ghost-dot"></i> Ghost on your stage</span>
+            <span><i class="arrow-dot">▶</i> Player is off-screen</span>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+    <script src="./config.js"></script>
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
