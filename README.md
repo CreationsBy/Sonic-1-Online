@@ -23,7 +23,9 @@ To share the static site itself, use the included `.github/workflows/pages.yml` 
 2. Open **Settings â†’ Pages** and set **Source** to **GitHub Actions**.
 3. The workflow publishes the contents of `public/`, so `public/index.html` becomes the site's root page automatically.
 
-There is no visitor-facing server configuration field. GitHub Pages can share the interface and client files, but it is a static host and cannot run the lobby/WebSocket process. Running `npm start` serves the client and multiplayer backend together with no configuration. If a Pages deployment is later connected to a separately hosted backend, the site owner sets `window.SONIC_SERVER_URL` once in `public/config.js`; visitors are not asked for an address.
+There is no visitor-facing server configuration field. GitHub Pages can share the interface and client files, but it is a static host and cannot run the lobby/WebSocket process. Running `npm start` serves the client and multiplayer backend together with no configuration.
+
+For working online rooms from the Pages copy, deploy this Node application to a public HTTPS host that supports WebSockets. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**, create `SONIC_SERVER_URL`, and set it to that host's public HTTPS address. The Pages workflow writes it into the deployed client automatically; visitors never see or enter it. A blank variable now produces a clear configuration message instead of incorrectly trying `wss://<account>.github.io/ws` and returning a 404.
 
 Do not put the ROM in `public/` or the Pages artifact. Every player continues to select their own local copy.
 

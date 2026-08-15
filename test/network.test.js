@@ -24,3 +24,10 @@ test("preserves an explicit WSS endpoint without duplicating /ws", () => {
     "wss://sonic-server.example.com/ws"
   );
 });
+
+test("does not send lobby WebSockets to GitHub Pages", () => {
+  assert.throws(
+    () => buildSocketUrl("", "https://creationsby.github.io/sonic-1-online/"),
+    /not configured for this GitHub Pages deployment/
+  );
+});

@@ -111,8 +111,13 @@ export function resolveSocketUrl() {
 
 export function buildSocketUrl(configured, pageHref) {
   configured = String(configured || "").trim();
+  const page = new URL(pageHref);
   if (!configured) {
-    const page = new URL(pageHref);
+    if (page.hostname.toLowerCase().endsWith(".github.io")) {
+      throw new Error(
+        "Online lobbies are not configured for this GitHub Pages deployment. The site owner must deploy the multiplayer service."
+      );
+    }
     page.protocol = page.protocol === "https:" ? "wss:" : "ws:";
     page.pathname = "/ws";
     page.search = "";
@@ -120,7 +125,7 @@ export function buildSocketUrl(configured, pageHref) {
     return page.href;
   }
 
-  const url = new URL(configured, pageHref);
+  const url = new URL(configured, page);
   if (url.protocol === "https:") url.protocol = "wss:";
   else if (url.protocol === "http:") url.protocol = "ws:";
   if (url.protocol !== "ws:" && url.protocol !== "wss:") {

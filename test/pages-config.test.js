@@ -9,6 +9,7 @@ test("GitHub Pages never parses or publishes the binary ROM", () => {
 
   assert.match(config, /^exclude:\s*[\s\S]*?^  - rom$/m);
   assert.match(workflow, /^\s+path: public$/m);
+  assert.match(workflow, /vars\.SONIC_SERVER_URL/);
   assert.equal(existsSync(new URL("../public/.nojekyll", import.meta.url)), true);
   assert.equal(existsSync(new URL("../public/rom", import.meta.url)), false);
   assert.doesNotMatch(page, /Multiplayer server URL|id="server-url"|id="save-server"/i);
