@@ -25,7 +25,7 @@ To share the static site itself, use the included `.github/workflows/pages.yml` 
 
 There is no visitor-facing server configuration field. GitHub Pages can share the interface and client files, but it is a static host and cannot run the lobby/WebSocket process. Running `npm start` serves the client and multiplayer backend together with no configuration.
 
-For working online rooms from the Pages copy, deploy this Node application to a public HTTPS host that supports WebSockets. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**, create `SONIC_SERVER_URL`, and set it to that host's public HTTPS address. The Pages workflow writes it into the deployed client automatically; visitors never see or enter it. A blank variable now produces a clear configuration message instead of incorrectly trying `wss://<account>.github.io/ws` and returning a 404.
+The Pages copy automatically connects to the deployed Cloudflare Worker listed below. Visitors never see or enter a backend address.
 
 ### Cloudflare multiplayer backend
 
@@ -35,8 +35,8 @@ When connecting this repository through Cloudflare Workers Builds:
 
 1. Use the deploy command `npx wrangler deploy`.
 2. Do not select Jekyll and do not use `_site` as an output directory. Wrangler reads `wrangler.jsonc`; no static build command is needed for this backend.
-3. After deployment, copy the resulting `https://sonic-1-online-backend.<account>.workers.dev` address.
-4. Save that address as the GitHub Actions repository variable `SONIC_SERVER_URL`, then rerun the GitHub Pages workflow.
+3. The current backend is `https://sonic-1-online.spaghettijedi.workers.dev`; its `/health` route confirms the service is online.
+4. The Pages client and workflow already use that address. If the Worker address changes later, update `public/config.js` and `.github/workflows/pages.yml`.
 
 The Worker exposes `/health` for a quick deployment check and `/ws` for lobby WebSockets. The ROM is never included in or uploaded to the Worker.
 
