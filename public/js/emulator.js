@@ -1,5 +1,6 @@
-import { PLAYER_COLORS, colorForSlot, stageFromZoneAct } from "./protocol-constants.js";
+import { colorForSlot, stageFromZoneAct } from "./protocol-constants.js";
 import { readSonicTelemetry } from "./sonic-memory.js";
+import { createPlayerRomBlob } from "./sonic-rom-palette.js";
 import { deviceProfile } from "./device.js";
 
 const VIEW_WIDTH = 320;
@@ -25,11 +26,6 @@ export class SonicEmulator {
     this.pollBusy = false;
     this.lastCheckpointAt = 0;
     this.gameCanvas = null;
-    this.spriteVariants = new Map();
-    this.spriteFacingLeft = false;
-    this.spriteCapture = document.createElement("canvas");
-    this.spriteCapture.width = 40;
-    this.spriteCapture.height = 48;
     this.spectatorFrameCanvas = document.createElement("canvas");
     this.spectatorFrameCanvas.width = VIEW_WIDTH;
     this.spectatorFrameCanvas.height = VIEW_HEIGHT;
@@ -42,7 +38,13 @@ export class SonicEmulator {
     if (!(romFile instanceof File)) throw new Error("Select the Sonic 1 ROM before starting.");
     this.started = true;
     this.pendingResumeState = resumeState;
-    this.objectUrl = URL.createObjectURL(romFile);
+    try {
+      const playableRom = await createPlayerRomBlob(romFile, this.getSelf?.()?.slot ?? 1);
+      this.objectUrl = URL.createObjectURL(playableRom);
+    } catch (error) {
+      this.started = false;
+      throw error;
+    }
 
     const emulatorHost = document.querySelector("#game");
     emulatorHost.replaceChildren();
@@ -154,7 +156,6 @@ export class SonicEmulator {
       const telemetry = readSonicTelemetry(state);
       if (telemetry) {
         this.localTelemetry = telemetry;
-        if (telemetry.visible) this.#refreshSpriteVariants(telemetry);
         this.onTelemetry?.({
           x: telemetry.x,
           y: telemetry.y,
@@ -177,7 +178,7 @@ export class SonicEmulator {
   }
 
   #attachOverlay() {
-    const layer = document.querySelector("#ghost-layer");
+    const layer = document.querySelector("#player-name-layer");
     const shell = document.querySelector("#game-shell");
     const context = layer.getContext("2d");
     layer.width = VIEW_WIDTH;
@@ -223,23 +224,7 @@ export class SonicEmulator {
     const localX = local.x - local.cameraX;
     const localY = local.y - local.cameraY;
 
-    // Players 2–4 get their assigned color drawn over the native blue Sonic.
-    if (self.slot > 1) {
-      drawPlayerGhost(
-        context,
-        localX,
-        localY,
-        self.color,
-        self.name,
-        Boolean(local.status & 1),
-        true,
-        this.spriteVariants.get(self.color),
-        this.spriteFacingLeft
-      );
-    } else {
-      // Player 1 keeps the game's native blue sprite but still gets a live tag.
-      drawNameTag(context, self.name, localX, localY - 23, self.color);
-    }
+    drawNameTag(context, self.name, localX, localY - 23, self.color);
 
     for (const player of this.getPlayers?.() ?? []) {
       if (player.id === self.id || !player.connected || !player.telemetry?.visible) continue;
@@ -254,58 +239,16 @@ export class SonicEmulator {
       this.visualPositions.set(player.id, previous);
 
       if (previous.x > -24 && previous.x < VIEW_WIDTH + 24 && previous.y > -32 && previous.y < VIEW_HEIGHT + 28) {
-        drawPlayerGhost(
+        drawNameTag(
           context,
-          previous.x,
-          previous.y,
-          player.color ?? colorForSlot(player.slot),
           player.name,
-          Boolean(remote.status & 1),
-          false,
-          this.spriteVariants.get(player.color ?? colorForSlot(player.slot)),
-          this.spriteFacingLeft
+          previous.x,
+          previous.y - 23,
+          player.color ?? colorForSlot(player.slot)
         );
       } else {
         drawEdgeMarker(context, previous.x, previous.y, remote.x - local.x, player);
       }
-    }
-  }
-
-  #refreshSpriteVariants(telemetry) {
-    const source = this.gameCanvas;
-    if (!source?.width || !source?.height) return;
-    const screenX = telemetry.x - telemetry.cameraX;
-    const screenY = telemetry.y - telemetry.cameraY;
-    if (screenX < 12 || screenX > VIEW_WIDTH - 12 || screenY < 18 || screenY > VIEW_HEIGHT - 12) return;
-
-    const context = this.spriteCapture.getContext("2d", { willReadFrequently: true });
-    context.clearRect(0, 0, 40, 48);
-    context.imageSmoothingEnabled = false;
-    try {
-      const scaleX = source.width / VIEW_WIDTH;
-      const scaleY = source.height / VIEW_HEIGHT;
-      context.drawImage(
-        source,
-        (screenX - 20) * scaleX,
-        (screenY - 24) * scaleY,
-        40 * scaleX,
-        48 * scaleY,
-        0,
-        0,
-        40,
-        48
-      );
-      const sourceImage = context.getImageData(0, 0, 40, 48);
-      const mask = makeSonicMask(sourceImage.data, 40, 48);
-      if (mask.pixelCount < 45) return;
-
-      this.spriteVariants.clear();
-      for (const color of PLAYER_COLORS) {
-        this.spriteVariants.set(color, recolorSprite(sourceImage, mask.keep, color));
-      }
-      this.spriteFacingLeft = Boolean(telemetry.status & 1);
-    } catch {
-      // Some WebGL configurations disallow readback; the vector fallback remains available.
     }
   }
 
@@ -318,7 +261,7 @@ export class SonicEmulator {
       context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
       context.imageSmoothingEnabled = false;
       context.drawImage(source, 0, 0, this.spectatorFrameCanvas.width, this.spectatorFrameCanvas.height);
-      const overlay = document.querySelector("#ghost-layer");
+      const overlay = document.querySelector("#player-name-layer");
       if (overlay?.width && overlay?.height) {
         context.drawImage(overlay, 0, 0, this.spectatorFrameCanvas.width, this.spectatorFrameCanvas.height);
       }
@@ -388,115 +331,6 @@ function genesisTouchLayout() {
   ];
 }
 
-function drawPlayerGhost(context, x, y, color, name, facingLeft, localSkin, sprite, spriteFacingLeft) {
-  if (!sprite) {
-    drawGhostSonic(context, x, y, color, name, facingLeft, localSkin);
-    return;
-  }
-
-  context.save();
-  context.translate(Math.round(x), Math.round(y));
-  if (facingLeft !== spriteFacingLeft) context.scale(-1, 1);
-  context.globalAlpha = localSkin ? 1 : 0.88;
-  context.strokeStyle = `${color}99`;
-  context.lineWidth = 2;
-  context.beginPath();
-  context.ellipse(0, 15, 13, 4, 0, 0, Math.PI * 2);
-  context.stroke();
-  context.drawImage(sprite, -20, -24);
-  context.restore();
-  drawNameTag(context, name, x, y - 23, color);
-}
-
-function drawGhostSonic(context, x, y, color, name, facingLeft, localSkin) {
-  context.save();
-  context.translate(Math.round(x), Math.round(y));
-  context.scale(facingLeft ? -1 : 1, 1);
-  context.globalAlpha = localSkin ? 0.98 : 0.88;
-  context.lineJoin = "round";
-  context.lineCap = "round";
-
-  // Aura separates a shared player from the native game pixels.
-  context.strokeStyle = `${color}88`;
-  context.lineWidth = 2;
-  context.beginPath();
-  context.ellipse(0, 14, 12, 4, 0, 0, Math.PI * 2);
-  context.stroke();
-
-  context.fillStyle = color;
-  context.strokeStyle = "#07152d";
-  context.lineWidth = 1.5;
-
-  // Quills, head, and body form a compact Sonic-like live marker.
-  context.beginPath();
-  context.moveTo(-6, -13);
-  context.lineTo(-16, -18);
-  context.lineTo(-11, -9);
-  context.lineTo(-19, -8);
-  context.lineTo(-10, -2);
-  context.lineTo(-17, 2);
-  context.lineTo(-6, 3);
-  context.closePath();
-  context.fill();
-  context.stroke();
-  context.beginPath();
-  context.ellipse(0, -8, 9, 10, -0.12, 0, Math.PI * 2);
-  context.ellipse(-1, 4, 8, 10, 0.12, 0, Math.PI * 2);
-  context.fill();
-  context.stroke();
-
-  context.fillStyle = "#f4bd72";
-  context.beginPath();
-  context.ellipse(5, -5, 5.5, 6, -0.2, 0, Math.PI * 2);
-  context.ellipse(2, 4, 4.5, 6, 0, 0, Math.PI * 2);
-  context.fill();
-
-  context.fillStyle = "white";
-  context.beginPath();
-  context.ellipse(3, -12, 2.6, 4.8, -0.1, 0, Math.PI * 2);
-  context.ellipse(7, -11.5, 2.4, 4.5, 0.1, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = "#07152d";
-  context.fillRect(6, -12, 1.5, 3);
-  context.beginPath();
-  context.arc(10, -5, 1.3, 0, Math.PI * 2);
-  context.fill();
-
-  context.strokeStyle = color;
-  context.lineWidth = 4;
-  context.beginPath();
-  context.moveTo(-5, 2);
-  context.lineTo(-10, 7);
-  context.moveTo(5, 2);
-  context.lineTo(10, 7);
-  context.stroke();
-  context.fillStyle = "white";
-  context.beginPath();
-  context.arc(-11, 8, 3, 0, Math.PI * 2);
-  context.arc(11, 8, 3, 0, Math.PI * 2);
-  context.fill();
-
-  context.strokeStyle = "#f4bd72";
-  context.lineWidth = 3;
-  context.beginPath();
-  context.moveTo(-3, 10);
-  context.lineTo(-4, 15);
-  context.moveTo(3, 10);
-  context.lineTo(5, 15);
-  context.stroke();
-  context.fillStyle = "#ef334d";
-  context.strokeStyle = "white";
-  context.lineWidth = 1.5;
-  context.beginPath();
-  context.ellipse(-7, 16, 6, 2.8, -0.08, 0, Math.PI * 2);
-  context.ellipse(8, 16, 6, 2.8, 0.08, 0, Math.PI * 2);
-  context.fill();
-  context.stroke();
-  context.restore();
-
-  drawNameTag(context, name, x, y - 21, color);
-}
-
 export function drawNameTag(context, name, x, y, color) {
   context.save();
   context.font = "bold 8px system-ui, sans-serif";
@@ -512,90 +346,6 @@ export function drawNameTag(context, name, x, y, color) {
   context.fillStyle = color;
   context.fillText(label, labelX, labelY);
   context.restore();
-}
-
-function makeSonicMask(pixels, width, height) {
-  const base = new Uint8Array(width * height);
-  const keep = new Uint8Array(width * height);
-  let pixelCount = 0;
-
-  for (let index = 0; index < base.length; index += 1) {
-    const offset = index * 4;
-    const r = pixels[offset];
-    const g = pixels[offset + 1];
-    const b = pixels[offset + 2];
-    const alpha = pixels[offset + 3];
-    if (alpha > 80 && isSonicColor(r, g, b)) base[index] = 1;
-  }
-
-  // Retain dark outline pixels immediately around recognizable sprite colors.
-  for (let y = 1; y < height - 1; y += 1) {
-    for (let x = 1; x < width - 1; x += 1) {
-      const index = y * width + x;
-      const offset = index * 4;
-      const dark = pixels[offset] < 72 && pixels[offset + 1] < 72 && pixels[offset + 2] < 90;
-      let nearSprite = Boolean(base[index]);
-      if (!nearSprite && dark) {
-        for (let dy = -2; dy <= 2 && !nearSprite; dy += 1) {
-          for (let dx = -2; dx <= 2; dx += 1) {
-            const neighborX = x + dx;
-            const neighborY = y + dy;
-            if (
-              neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height &&
-              base[neighborY * width + neighborX]
-            ) {
-              nearSprite = true;
-              break;
-            }
-          }
-        }
-      }
-      if (nearSprite) {
-        keep[index] = 1;
-        pixelCount += 1;
-      }
-    }
-  }
-  return { keep, pixelCount };
-}
-
-function isSonicColor(r, g, b) {
-  const blueFur = b > 75 && b > r * 1.25 && b > g * 1.08;
-  const gloveWhite = r > 165 && g > 165 && b > 165 && Math.max(r, g, b) - Math.min(r, g, b) < 75;
-  const skin = r > 125 && g > 55 && g < 215 && b < 155 && r > g * 1.04;
-  const shoeRed = r > 105 && r > g * 1.3 && r > b * 1.18;
-  return blueFur || gloveWhite || skin || shoeRed;
-}
-
-function recolorSprite(sourceImage, keep, color) {
-  const output = new ImageData(new Uint8ClampedArray(sourceImage.data), sourceImage.width, sourceImage.height);
-  const [targetR, targetG, targetB] = hexToRgb(color);
-  for (let index = 0; index < keep.length; index += 1) {
-    const offset = index * 4;
-    if (!keep[index]) {
-      output.data[offset + 3] = 0;
-      continue;
-    }
-    const r = output.data[offset];
-    const g = output.data[offset + 1];
-    const b = output.data[offset + 2];
-    if (b > 75 && b > r * 1.25 && b > g * 1.08) {
-      const light = Math.max(0.45, Math.min(1.15, b / 210));
-      output.data[offset] = targetR * light;
-      output.data[offset + 1] = targetG * light;
-      output.data[offset + 2] = targetB * light;
-    }
-  }
-  const canvas = document.createElement("canvas");
-  canvas.width = sourceImage.width;
-  canvas.height = sourceImage.height;
-  canvas.getContext("2d").putImageData(output, 0, 0);
-  return canvas;
-}
-
-function hexToRgb(hex) {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return [(value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff];
 }
 
 function drawEdgeMarker(context, x, y, deltaX, player) {

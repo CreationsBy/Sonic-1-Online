@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Four-player cooperative Sonic 1 rooms with live teammate ghosts and spectating.",
+  "description": "Four-player cooperative Sonic 1 rooms with live teammate positions and spectating.",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check cloudflare/worker.js && node --check public/config.js && node --check public/js/app.js && node --check public/js/device.js && node --check public/js/emulator.js && node --check public/js/network.js",
+    "check": "node --check src/server.js && node --check cloudflare/worker.js && node --check public/config.js && node --check public/js/app.js && node --check public/js/device.js && node --check public/js/emulator.js && node --check public/js/sonic-rom-palette.js && node --check public/js/network.js",
     "deploy:cloudflare": "npx wrangler deploy",
     "dev:cloudflare": "npx wrangler dev"
   },

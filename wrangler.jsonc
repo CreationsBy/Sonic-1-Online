@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sonic-1-online",
+  "name": "sonic-1-online-backend",
   "main": "cloudflare/worker.js",
   "compatibility_date": "2026-08-15",
   "observability": {
