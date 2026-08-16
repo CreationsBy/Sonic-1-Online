@@ -260,6 +260,7 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
 .game-shell { position: relative; width: 100%; height: clamp(420px, calc(100vh - 94px), 820px); min-height: 0; border: 1px solid #274b82; border-radius: 12px; background: #000; overflow: hidden; box-shadow: 0 20px 60px #000; }
 #game { width: 100%; height: 100%; min-height: 0; max-height: 100%; overflow: hidden; }
 #game > div, #game > .ejs_parent { width: 100%; height: 100%; min-height: 0; max-height: 100%; overflow: hidden; }
+#game .ejs_menu_bar, #game .ejs_context_menu, #game .ejs_virtualGamepad_open { display: none !important; }
 #player-name-layer { position: absolute; z-index: 20; pointer-events: none; image-rendering: pixelated; }
 .spectator-view { position: absolute; z-index: 35; inset: 0; display: flex; flex-direction: column; background: #020916; }
 .spectator-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 60px; padding: 10px 14px; border-bottom: 1px solid #244d86; background: linear-gradient(90deg, #09265a, #071733); }
@@ -317,6 +318,14 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.touch-device #game .ejs_virtualGamepad_parent { bottom: 0 !important; }
+.touch-device #game .ejs_virtualGamepad_button {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(5, 24, 59, 0.55);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
 }
 
 .touch-device .primary-button,

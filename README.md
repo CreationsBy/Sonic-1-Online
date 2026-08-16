@@ -95,7 +95,9 @@ Spectator pictures are silent, compressed 320×224 canvas snapshots sent at roug
 
 ## Controls and emulator menu
 
-EmulatorJS supplies keyboard/gamepad mapping and its on-screen controls. Open the emulator's settings menu to remap controls for the current browser. Multiplayer does not send controller input to other players.
+EmulatorJS supplies the standard keyboard/gamepad mapping and the custom Genesis touch controls. Its contextual menu and bottom toolbar are hidden so they cannot cover the game; multiplayer never sends controller input to other players.
+
+The Genesis Plus GX core runs Sonic at the original console timing (approximately 60 FPS for the NTSC mode selected by this multi-region ROM). VSync is forced on, fast-forward/slow-motion/rewind and shaders are forced off, and EmulatorJS settings are not restored from browser storage. Multiplayer position extraction runs four times per second so save-state serialization does not compete with the emulation frame loop.
 
 The client detects iPhone, iPod, iPad, iPadOS devices reporting `MacIntel`, desktop Macs, Android, and other coarse-pointer devices. On touch devices it enables a Genesis layout with a D-pad plus A, B, C, and Start buttons. The game uses safe-area insets on notched Apple devices, larger tap targets, compact player cards in portrait, a full-height game surface, and a landscape layout that gives most of the screen to the emulator.
 

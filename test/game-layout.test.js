@@ -10,3 +10,11 @@ test("desktop emulator has a definite bounded height without inherited-height fe
   assert.match(css, /#game\s*>\s*div[^}]*height:\s*100%[^}]*max-height:\s*100%/s);
   assert.doesNotMatch(css, /#game[^}]*min-height:\s*inherit/);
 });
+
+test("hides EmulatorJS chrome while preserving the mobile virtual gamepad", async () => {
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+
+  assert.match(css, /#game \.ejs_menu_bar[^}]*display:\s*none\s*!important/);
+  assert.match(css, /\.touch-device #game \.ejs_virtualGamepad_parent\s*\{[^}]*bottom:\s*0\s*!important/);
+  assert.doesNotMatch(css, /\.ejs_virtualGamepad_parent[^}]*display:\s*none/);
+});

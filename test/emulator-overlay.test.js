@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { drawNameTag } from "../public/js/emulator.js";
+import { drawNameTag, NATIVE_SPEED_OPTIONS, TELEMETRY_INTERVAL_MS } from "../public/js/emulator.js";
+
+test("uses native-speed emulator settings with low-overhead telemetry", () => {
+  assert.deepEqual(NATIVE_SPEED_OPTIONS, {
+    vsync: "enabled",
+    fastForward: "disabled",
+    slowMotion: "disabled",
+    rewindEnabled: "disabled",
+    shader: "disabled",
+    fps: "hide"
+  });
+  assert.equal(TELEMETRY_INTERVAL_MS, 250);
+});
 
 test("draws a clamped player name using the matching Sonic color", () => {
   const calls = [];

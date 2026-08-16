@@ -5,9 +5,18 @@ import { deviceProfile } from "./device.js";
 
 const VIEW_WIDTH = 320;
 const VIEW_HEIGHT = 224;
-const TELEMETRY_INTERVAL_MS = 160;
+export const TELEMETRY_INTERVAL_MS = 250;
 const CHECKPOINT_INTERVAL_MS = 5000;
 const SPECTATOR_FRAME_INTERVAL_MS = deviceProfile.isMobile ? 500 : 340;
+
+export const NATIVE_SPEED_OPTIONS = Object.freeze({
+  vsync: "enabled",
+  fastForward: "disabled",
+  slowMotion: "disabled",
+  rewindEnabled: "disabled",
+  shader: "disabled",
+  fps: "hide"
+});
 
 export class SonicEmulator {
   constructor({ onTelemetry, onCheckpoint, onReady, getPlayers, getSelf }) {
@@ -57,13 +66,14 @@ export class SonicEmulator {
     window.EJS_pathtodata = "https://cdn.emulatorjs.org/stable/data/";
     window.EJS_startOnLoaded = true;
     window.EJS_threads = false;
+    window.EJS_browserMode = deviceProfile.isTouch ? "mobile" : "desktop";
     window.EJS_noAutoFocus = false;
     window.EJS_controlScheme = "segaMD";
     window.EJS_disableDatabases = true;
-    window.EJS_disableLocalStorage = false;
+    window.EJS_disableLocalStorage = true;
     window.EJS_defaultOptions = {
+      ...NATIVE_SPEED_OPTIONS,
       "save-state-location": "browser",
-      rewindEnabled: "disabled"
     };
     window.EJS_Buttons = {
       saveState: false,
@@ -119,8 +129,7 @@ export class SonicEmulator {
         this.ready = true;
         this.onReady?.();
         this.#attachOverlay();
-        const pollInterval = deviceProfile.isMobile ? 240 : TELEMETRY_INTERVAL_MS;
-        this.pollTimer = setInterval(() => this.#poll(), pollInterval);
+        this.pollTimer = setInterval(() => this.#poll(), TELEMETRY_INTERVAL_MS);
         this.#poll();
       })
       .catch((error) => this.onReady?.(error));
