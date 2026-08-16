@@ -1,4 +1,4 @@
-import { colorForSlot, stageFromZoneAct } from "./protocol-constants.js";
+import { PLAYER_COLORS, colorForSlot, stageFromZoneAct } from "./protocol-constants.js";
 import { readSonicTelemetry } from "./sonic-memory.js";
 import { createPlayerRomBlob } from "./sonic-rom-palette.js";
 import { deviceProfile } from "./device.js";
@@ -35,6 +35,11 @@ export class SonicEmulator {
     this.pollBusy = false;
     this.lastCheckpointAt = 0;
     this.gameCanvas = null;
+    this.remoteSpriteVariants = new Map();
+    this.spriteSourceFacingLeft = false;
+    this.spriteCapture = document.createElement("canvas");
+    this.spriteCapture.width = 40;
+    this.spriteCapture.height = 48;
     this.spectatorFrameCanvas = document.createElement("canvas");
     this.spectatorFrameCanvas.width = VIEW_WIDTH;
     this.spectatorFrameCanvas.height = VIEW_HEIGHT;
@@ -165,6 +170,7 @@ export class SonicEmulator {
       const telemetry = readSonicTelemetry(state);
       if (telemetry) {
         this.localTelemetry = telemetry;
+        if (telemetry.visible) this.#refreshRemoteSpriteVariants(telemetry);
         this.onTelemetry?.({
           x: telemetry.x,
           y: telemetry.y,
@@ -187,7 +193,7 @@ export class SonicEmulator {
   }
 
   #attachOverlay() {
-    const layer = document.querySelector("#player-name-layer");
+    const layer = document.querySelector("#player-overlay-layer");
     const shell = document.querySelector("#game-shell");
     const context = layer.getContext("2d");
     layer.width = VIEW_WIDTH;
@@ -248,16 +254,61 @@ export class SonicEmulator {
       this.visualPositions.set(player.id, previous);
 
       if (previous.x > -24 && previous.x < VIEW_WIDTH + 24 && previous.y > -32 && previous.y < VIEW_HEIGHT + 28) {
-        drawNameTag(
+        const color = player.color ?? colorForSlot(player.slot);
+        drawRemotePlayer(
           context,
-          player.name,
           previous.x,
-          previous.y - 23,
-          player.color ?? colorForSlot(player.slot)
+          previous.y,
+          color,
+          player.name,
+          Boolean(remote.status & 1),
+          this.remoteSpriteVariants.get(color),
+          this.spriteSourceFacingLeft
         );
       } else {
         drawEdgeMarker(context, previous.x, previous.y, remote.x - local.x, player);
       }
+    }
+  }
+
+  #refreshRemoteSpriteVariants(telemetry) {
+    const source = this.gameCanvas;
+    const self = this.getSelf?.();
+    if (!source?.width || !source?.height || !self?.slot) return;
+
+    const screenX = telemetry.x - telemetry.cameraX;
+    const screenY = telemetry.y - telemetry.cameraY;
+    if (screenX < 20 || screenX > VIEW_WIDTH - 20 || screenY < 24 || screenY > VIEW_HEIGHT - 24) return;
+
+    const context = this.spriteCapture.getContext("2d", { willReadFrequently: true });
+    context.clearRect(0, 0, 40, 48);
+    context.imageSmoothingEnabled = false;
+    try {
+      const scaleX = source.width / VIEW_WIDTH;
+      const scaleY = source.height / VIEW_HEIGHT;
+      context.drawImage(
+        source,
+        (screenX - 20) * scaleX,
+        (screenY - 24) * scaleY,
+        40 * scaleX,
+        48 * scaleY,
+        0,
+        0,
+        40,
+        48
+      );
+
+      const sourceImage = context.getImageData(0, 0, 40, 48);
+      const mask = makeSonicMask(sourceImage.data, 40, 48, self.slot);
+      if (mask.pixelCount < 40) return;
+
+      for (const color of PLAYER_COLORS) {
+        const existing = this.remoteSpriteVariants.get(color);
+        this.remoteSpriteVariants.set(color, recolorSonicSprite(sourceImage, mask, color, existing));
+      }
+      this.spriteSourceFacingLeft = Boolean(telemetry.status & 1);
+    } catch {
+      // A vector Sonic remains visible if a browser/GPU does not permit canvas readback.
     }
   }
 
@@ -270,7 +321,7 @@ export class SonicEmulator {
       context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
       context.imageSmoothingEnabled = false;
       context.drawImage(source, 0, 0, this.spectatorFrameCanvas.width, this.spectatorFrameCanvas.height);
-      const overlay = document.querySelector("#player-name-layer");
+      const overlay = document.querySelector("#player-overlay-layer");
       if (overlay?.width && overlay?.height) {
         context.drawImage(overlay, 0, 0, this.spectatorFrameCanvas.width, this.spectatorFrameCanvas.height);
       }
@@ -338,6 +389,258 @@ function genesisTouchLayout() {
       input_value: 3
     }
   ];
+}
+
+export function drawRemotePlayer(context, x, y, color, name, facingLeft, sprite, spriteFacingLeft) {
+  if (sprite) {
+    context.save();
+    context.translate(Math.round(x), Math.round(y));
+    context.globalAlpha = 0.94;
+    context.fillStyle = "rgba(0, 0, 0, 0.34)";
+    context.beginPath();
+    context.ellipse(0, 16, 11, 3, 0, 0, Math.PI * 2);
+    context.fill();
+    if (facingLeft !== spriteFacingLeft) context.scale(-1, 1);
+    context.imageSmoothingEnabled = false;
+    context.drawImage(sprite, -20, -24);
+    context.restore();
+  } else {
+    drawRemoteSonicFallback(context, x, y, color, facingLeft);
+  }
+
+  drawNameTag(context, name, x, y - 25, color);
+}
+
+function drawRemoteSonicFallback(context, x, y, color, facingLeft) {
+  context.save();
+  context.translate(Math.round(x), Math.round(y));
+  context.scale(facingLeft ? -1 : 1, 1);
+  context.globalAlpha = 0.94;
+  context.lineJoin = "round";
+  context.lineCap = "round";
+
+  context.fillStyle = "rgba(0, 0, 0, 0.34)";
+  context.beginPath();
+  context.ellipse(0, 16, 11, 3, 0, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = color;
+  context.strokeStyle = "#061329";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(-5, -13);
+  context.lineTo(-16, -17);
+  context.lineTo(-10, -8);
+  context.lineTo(-18, -7);
+  context.lineTo(-9, -1);
+  context.lineTo(-16, 3);
+  context.lineTo(-5, 3);
+  context.closePath();
+  context.fill();
+  context.stroke();
+  context.beginPath();
+  context.ellipse(0, -8, 9, 10, -0.12, 0, Math.PI * 2);
+  context.ellipse(-1, 4, 8, 9, 0.12, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+
+  context.fillStyle = "#f4bd72";
+  context.beginPath();
+  context.ellipse(5, -5, 5.5, 6, -0.2, 0, Math.PI * 2);
+  context.ellipse(2, 4, 4.5, 5.5, 0, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = "#fff";
+  context.beginPath();
+  context.ellipse(3, -12, 2.6, 4.8, -0.1, 0, Math.PI * 2);
+  context.ellipse(7, -11.5, 2.4, 4.5, 0.1, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#061329";
+  context.fillRect(6, -12, 1.5, 3);
+  context.beginPath();
+  context.arc(10, -5, 1.3, 0, Math.PI * 2);
+  context.fill();
+
+  context.strokeStyle = color;
+  context.lineWidth = 4;
+  context.beginPath();
+  context.moveTo(-5, 2);
+  context.lineTo(-10, 7);
+  context.moveTo(5, 2);
+  context.lineTo(10, 7);
+  context.stroke();
+  context.fillStyle = "#fff";
+  context.beginPath();
+  context.arc(-11, 8, 3, 0, Math.PI * 2);
+  context.arc(11, 8, 3, 0, Math.PI * 2);
+  context.fill();
+
+  context.strokeStyle = "#f4bd72";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(-3, 10);
+  context.lineTo(-4, 15);
+  context.moveTo(3, 10);
+  context.lineTo(5, 15);
+  context.stroke();
+  context.fillStyle = "#ef334d";
+  context.strokeStyle = "#fff";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.ellipse(-7, 16, 6, 2.8, -0.08, 0, Math.PI * 2);
+  context.ellipse(8, 16, 6, 2.8, 0.08, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+  context.restore();
+}
+
+function makeSonicMask(pixels, width, height, sourceSlot) {
+  const fur = new Uint8Array(width * height);
+  const base = new Uint8Array(width * height);
+  const candidate = new Uint8Array(width * height);
+
+  for (let index = 0; index < base.length; index += 1) {
+    const offset = index * 4;
+    const r = pixels[offset];
+    const g = pixels[offset + 1];
+    const b = pixels[offset + 2];
+    const alpha = pixels[offset + 3];
+    if (alpha <= 80) continue;
+    if (isPlayerFurColor(r, g, b, sourceSlot)) {
+      fur[index] = 1;
+      base[index] = 1;
+    } else if (isSonicSupportColor(r, g, b)) {
+      base[index] = 1;
+    }
+  }
+
+  candidate.set(base);
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const index = y * width + x;
+      const offset = index * 4;
+      const dark = pixels[offset + 3] > 80 && pixels[offset] < 82 && pixels[offset + 1] < 82 && pixels[offset + 2] < 94;
+      if (!dark) continue;
+      for (let dy = -2; dy <= 2 && !candidate[index]; dy += 1) {
+        for (let dx = -2; dx <= 2; dx += 1) {
+          const neighborX = x + dx;
+          const neighborY = y + dy;
+          if (base[neighborY * width + neighborX]) {
+            candidate[index] = 1;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  const visited = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let best = [];
+  let bestScore = -1;
+
+  for (let start = 0; start < candidate.length; start += 1) {
+    if (!candidate[start] || visited[start]) continue;
+    let head = 0;
+    let tail = 0;
+    let furPixels = 0;
+    let centerPixels = 0;
+    const component = [];
+    queue[tail++] = start;
+    visited[start] = 1;
+
+    while (head < tail) {
+      const index = queue[head++];
+      component.push(index);
+      if (fur[index]) furPixels += 1;
+      const x = index % width;
+      const y = Math.floor(index / width);
+      if (x >= 8 && x <= 32 && y >= 4 && y <= 44) centerPixels += 1;
+
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const neighborX = x + dx;
+          const neighborY = y + dy;
+          if (neighborX < 0 || neighborX >= width || neighborY < 0 || neighborY >= height) continue;
+          const neighbor = neighborY * width + neighborX;
+          if (!candidate[neighbor] || visited[neighbor]) continue;
+          visited[neighbor] = 1;
+          queue[tail++] = neighbor;
+        }
+      }
+    }
+
+    if (furPixels < 3) continue;
+    const score = component.length + furPixels * 20 + centerPixels * 2;
+    if (score > bestScore) {
+      bestScore = score;
+      best = component;
+    }
+  }
+
+  const keep = new Uint8Array(width * height);
+  for (const index of best) keep[index] = 1;
+  return { keep, fur, pixelCount: best.length };
+}
+
+export function isPlayerFurColor(r, g, b, slot) {
+  if (slot === 1) {
+    const blue = b > 70 && b > r * 1.25 && b >= g * 0.95;
+    return blue && (b > g * 1.16 || g > r * 1.25);
+  }
+  if (slot === 2) {
+    return r > 80 && g > 18 && b > 18 && r > g * 1.25 && r > b * 1.2 && Math.abs(g - b) < 50;
+  }
+  if (slot === 3) {
+    return r > 80 && g > 70 && b < Math.min(r, g) * 0.72 && r < g * 1.45 && g < r * 1.45;
+  }
+  if (slot === 4) {
+    return g > 70 && g > r * 1.25 && g > b * 1.25;
+  }
+  return false;
+}
+
+function isSonicSupportColor(r, g, b) {
+  const white = r > 145 && g > 145 && b > 145 && Math.max(r, g, b) - Math.min(r, g, b) < 82;
+  const skin = r > 110 && g > 60 && b < Math.min(r, g) * 0.85 && r >= g * 0.85;
+  const tintedSkin = r > 160 && g > 75 && b > 75 && r > g * 1.15 && b > g * 1.05;
+  const shoeRed = r > 90 && r > g * 1.35 && r > b * 1.2;
+  const shoeYellow = r > 120 && g > 95 && b < 90;
+  return white || skin || tintedSkin || shoeRed || shoeYellow;
+}
+
+function recolorSonicSprite(sourceImage, mask, color, existingCanvas) {
+  const canvas = existingCanvas ?? document.createElement("canvas");
+  canvas.width = sourceImage.width;
+  canvas.height = sourceImage.height;
+  const context = canvas.getContext("2d");
+  const output = context.createImageData(sourceImage.width, sourceImage.height);
+  const [targetR, targetG, targetB] = hexToRgb(color);
+
+  for (let index = 0; index < mask.keep.length; index += 1) {
+    if (!mask.keep[index]) continue;
+    const offset = index * 4;
+    output.data[offset] = sourceImage.data[offset];
+    output.data[offset + 1] = sourceImage.data[offset + 1];
+    output.data[offset + 2] = sourceImage.data[offset + 2];
+    output.data[offset + 3] = sourceImage.data[offset + 3];
+    if (!mask.fur[index]) continue;
+
+    const sourceLight = Math.max(sourceImage.data[offset], sourceImage.data[offset + 1], sourceImage.data[offset + 2]);
+    const shade = Math.max(0.42, Math.min(1, sourceLight / 255));
+    output.data[offset] = Math.round(targetR * shade);
+    output.data[offset + 1] = Math.round(targetG * shade);
+    output.data[offset + 2] = Math.round(targetB * shade);
+  }
+
+  context.putImageData(output, 0, 0);
+  return canvas;
+}
+
+function hexToRgb(hex) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  return [(value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff];
 }
 
 export function drawNameTag(context, name, x, y, color) {

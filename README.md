@@ -1,6 +1,6 @@
 # Sonic 1 Online
 
-A private-room, maximum-four-player cooperative web experience for the original **Sonic the Hedgehog** on Sega Genesis. Each browser runs its own emulator, so teammates can move through the game at their own pace while live display names show where teammates are. The server relays position/stage metadata, on-demand spectator images, and short-lived reconnect checkpoints; it never receives the ROM.
+A private-room, maximum-four-player cooperative web experience for the original **Sonic the Hedgehog** on Sega Genesis. Each browser runs its own emulator, so teammates can move through the game at their own pace while live Sonic figures and display names show where teammates are. The server relays position/stage metadata, on-demand spectator images, and short-lived reconnect checkpoints; it never receives the ROM.
 
 ## Run it
 
@@ -61,15 +61,15 @@ This is asynchronous cooperative multiplayer, not traditional shared-input Genes
 - When the host starts, the server sends one future timestamp to every browser. Each browser launches at that timestamp.
 - The client reads the Genesis Plus GX save-state buffer four to six times a second, using the lower rate on mobile. That buffer begins with a 16-byte core signature followed by the Genesis 64 KiB work RAM.
 - Sonic 1's RAM fields provide Sonic's world X/Y position, camera X/Y, current zone/act, game mode, and facing bit.
-- Those small values go through WebSocket. A teammate on the same act gets a matching-color display name at `teammate world position - local camera position`. Off-screen teammates get a name-and-arrow marker. Players in another act remain visible in the player-status panel.
-- Player 1 is blue, Player 2 red, Player 3 yellow, and Player 4 green. Before EmulatorJS starts, the client changes only Sonic's four fur colors in that player's temporary in-memory ROM copy, including the game's underwater Sonic palettes, and updates the Mega Drive checksum. This makes the emulator render the real in-game Sonic sprite in the assigned color; no duplicate Sonic is drawn over the game. The selected file on disk is never changed or uploaded. Every player's matching-color display name remains anchored to their live position.
+- Those small values go through WebSocket. A teammate on the same act gets a matching-color Sonic and display name at `teammate world position - local camera position`. Off-screen teammates get a name-and-arrow marker. Players in another act remain visible in the player-status panel.
+- Player 1 is blue, Player 2 red, Player 3 yellow, and Player 4 green. Before EmulatorJS starts, the client changes only Sonic's four fur colors in that player's temporary in-memory ROM copy, including the game's underwater Sonic palettes, and updates the Mega Drive checksum. This makes the emulator render the local player's real in-game Sonic sprite in the assigned color; no duplicate is drawn over that local Sonic. Remote teammates are separate emulator sessions, so their synchronized Sonic figures are canvas overlays built from the current native Sonic sprite, with a vector Sonic fallback if canvas readback is unavailable. Every display name remains anchored above its Sonic.
 
 The relevant code is split by responsibility:
 
 - `src/lobby-store.js` owns four-seat rooms, host authorization, reconnect identity, telemetry validation, and stage-clear detection.
 - `src/server.js` serves the app and relays WebSocket events/checkpoints.
 - `public/js/sonic-memory.js` documents and reads the Sonic 1 RAM addresses.
-- `public/js/emulator.js` embeds EmulatorJS, extracts state, and renders the tracking display names.
+- `public/js/emulator.js` embeds EmulatorJS, extracts state, and renders remote Sonic figures with tracking display names.
 - `public/js/sonic-rom-palette.js` safely creates the player-specific in-memory Sonic palette before emulation.
 - `public/js/app.js` controls ROM validation, lobby UI, synchronized launch, team status, spectating, and notifications.
 
@@ -91,7 +91,7 @@ The server observes valid zone/act transitions. After a player has spent at leas
 
 Finishing Final Zone and reaching Sonic 1's ending marks that player as finished; it does not end the room for everyone else. The finished player's emulator pauses and the interface changes to spectator mode, where they can select any connected teammate who is still playing. If the selected teammate finishes or disconnects, the view switches to another available teammate automatically. A disconnected player's seat and checkpoint remain saved, so spectators wait for them if they are the only unfinished teammate.
 
-Spectator pictures are silent, compressed 320×224 canvas snapshots sent at roughly three frames per second on desktop and two on mobile. They include the watched player's live name layer, are produced only while someone is actively watching, and are dropped when either WebSocket is backed up. This keeps the feature practical on mobile connections without sharing controller input or ROM data.
+Spectator pictures are silent, compressed 320×224 canvas snapshots sent at roughly three frames per second on desktop and two on mobile. They include the watched player's live teammate Sonic-and-name layer, are produced only while someone is actively watching, and are dropped when either WebSocket is backed up. This keeps the feature practical on mobile connections without sharing controller input or ROM data.
 
 ## Controls and emulator menu
 

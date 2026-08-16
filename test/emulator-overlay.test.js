@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { drawNameTag, NATIVE_SPEED_OPTIONS, TELEMETRY_INTERVAL_MS } from "../public/js/emulator.js";
+import {
+  drawNameTag,
+  drawRemotePlayer,
+  isPlayerFurColor,
+  NATIVE_SPEED_OPTIONS,
+  TELEMETRY_INTERVAL_MS
+} from "../public/js/emulator.js";
 
 test("uses native-speed emulator settings with low-overhead telemetry", () => {
   assert.deepEqual(NATIVE_SPEED_OPTIONS, {
@@ -30,4 +36,37 @@ test("draws a clamped player name using the matching Sonic color", () => {
     { kind: "stroke", text: "Player Two", x: 23, y: 10, color: "#061329" },
     { kind: "fill", text: "Player Two", x: 23, y: 10, color: "#ff3d52" }
   ]);
+});
+
+test("draws both a sampled remote Sonic and its tracking display name", () => {
+  const calls = [];
+  const sprite = { kind: "sampled-sonic" };
+  const context = {
+    save() {},
+    restore() {},
+    translate() {},
+    scale() {},
+    beginPath() {},
+    ellipse() {},
+    fill() {},
+    measureText: () => ({ width: 32 }),
+    drawImage(image, x, y) { calls.push({ kind: "sprite", image, x, y }); },
+    strokeText() {},
+    fillText(text, x, y) { calls.push({ kind: "name", text, x, y, color: this.fillStyle }); }
+  };
+
+  drawRemotePlayer(context, 100, 80, "#ff3d52", "Player Two", false, sprite, false);
+
+  assert.deepEqual(calls, [
+    { kind: "sprite", image: sprite, x: -20, y: -24 },
+    { kind: "name", text: "Player Two", x: 100, y: 55, color: "#ff3d52" }
+  ]);
+});
+
+test("recognizes each native player fur palette without treating red shoes as red fur", () => {
+  assert.equal(isPlayerFurColor(70, 85, 210, 1), true);
+  assert.equal(isPlayerFurColor(210, 75, 75, 2), true);
+  assert.equal(isPlayerFurColor(220, 205, 55, 3), true);
+  assert.equal(isPlayerFurColor(65, 210, 80, 4), true);
+  assert.equal(isPlayerFurColor(220, 0, 0, 2), false);
 });
