@@ -62,7 +62,7 @@ test("a returning token keeps its player slot and checkpoint after disconnect", 
   assert.equal(returned.rejoined, true);
   assert.equal(returned.player.id, created.player.id);
   assert.equal(returned.player.slot, 1);
-  assert.deepEqual(returned.player.checkpoint, Buffer.from(checkpoint));
+  assert.deepEqual(returned.player.checkpoint, checkpoint);
 });
 
 test("only the host can start and all reserved seats must be connected", () => {

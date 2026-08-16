@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import {
   MAX_PLAYERS,
   SONIC_ROM,
@@ -11,6 +10,12 @@ const TOKEN_PATTERN = /^[a-zA-Z0-9_-]{16,128}$/;
 const CODE_PATTERN = /^\d{4}$/;
 const MIN_STAGE_CLEAR_MS = 8000;
 const MAX_CHECKPOINT_BYTES = 2 * 1024 * 1024;
+
+function randomRoomNumber() {
+  const value = new Uint16Array(1);
+  globalThis.crypto.getRandomValues(value);
+  return value[0] % 10000;
+}
 
 export class LobbyError extends Error {
   constructor(code, message) {
@@ -60,7 +65,7 @@ function publicPlayer(player, hostId) {
 export class LobbyStore {
   constructor({ randomCode, now } = {}) {
     this.lobbies = new Map();
-    this.randomCode = randomCode ?? (() => crypto.randomInt(0, 10000));
+    this.randomCode = randomCode ?? randomRoomNumber;
     this.now = now ?? (() => Date.now());
   }
 
@@ -250,7 +255,7 @@ export class LobbyStore {
     if (!(bytes instanceof Uint8Array) || bytes.byteLength < 65552 || bytes.byteLength > MAX_CHECKPOINT_BYTES) {
       throw new LobbyError("BAD_CHECKPOINT", "The emulator checkpoint size is invalid.");
     }
-    player.checkpoint = Buffer.from(bytes);
+    player.checkpoint = new Uint8Array(bytes);
     player.checkpointAt = this.now();
     lobby.touchedAt = this.now();
   }
@@ -305,7 +310,7 @@ export class LobbyStore {
 
   #newPlayer({ name, token, socket, slot }) {
     return {
-      id: crypto.randomUUID(),
+      id: globalThis.crypto.randomUUID(),
       token,
       name,
       slot,

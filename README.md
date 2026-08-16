@@ -27,6 +27,19 @@ There is no visitor-facing server configuration field. GitHub Pages can share th
 
 For working online rooms from the Pages copy, deploy this Node application to a public HTTPS host that supports WebSockets. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**, create `SONIC_SERVER_URL`, and set it to that host's public HTTPS address. The Pages workflow writes it into the deployed client automatically; visitors never see or enter it. A blank variable now produces a clear configuration message instead of incorrectly trying `wss://<account>.github.io/ws` and returning a 404.
 
+### Cloudflare multiplayer backend
+
+The repository includes `wrangler.jsonc` and `cloudflare/worker.js` for a Cloudflare Worker backend. It uses a SQLite-backed Durable Object to coordinate four-digit rooms, WebSockets, reconnect checkpoints, stage notifications, and spectator relay. This is separate from the static GitHub Pages deployment.
+
+When connecting this repository through Cloudflare Workers Builds:
+
+1. Use the deploy command `npx wrangler deploy`.
+2. Do not select Jekyll and do not use `_site` as an output directory. Wrangler reads `wrangler.jsonc`; no static build command is needed for this backend.
+3. After deployment, copy the resulting `https://sonic-1-online-backend.<account>.workers.dev` address.
+4. Save that address as the GitHub Actions repository variable `SONIC_SERVER_URL`, then rerun the GitHub Pages workflow.
+
+The Worker exposes `/health` for a quick deployment check and `/ws` for lobby WebSockets. The ROM is never included in or uploaded to the Worker.
+
 Do not put the ROM in `public/` or the Pages artifact. Every player continues to select their own local copy.
 
 If Pages is instead configured to **Deploy from a branch**, GitHub runs Jekyll against the repository root. The included `_config.yml` excludes `rom/` so Jekyll neither interprets the binary ROM's legacy `.md` filename nor publishes the ROM. The `public/.nojekyll` marker is also included in the static Actions artifact. GitHub Actions remains the recommended Pages source.
