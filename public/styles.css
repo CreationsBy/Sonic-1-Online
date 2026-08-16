@@ -256,10 +256,10 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
 .connection-state.warning i { background: var(--yellow); box-shadow: 0 0 10px var(--yellow); }
 .connection-state.offline i { background: var(--red); box-shadow: 0 0 10px var(--red); }
 
-.game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 275px; gap: 16px; width: min(1500px, calc(100% - 32px)); margin: 16px auto; }
-.game-shell { position: relative; min-height: min(76vh, 820px); border: 1px solid #274b82; border-radius: 12px; background: #000; overflow: hidden; box-shadow: 0 20px 60px #000; }
-#game { width: 100%; height: 100%; min-height: inherit; }
-#game > div { min-height: inherit; }
+.game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 275px; align-items: start; gap: 16px; width: min(1500px, calc(100% - 32px)); margin: 16px auto; }
+.game-shell { position: relative; width: 100%; height: clamp(420px, calc(100vh - 94px), 820px); min-height: 0; border: 1px solid #274b82; border-radius: 12px; background: #000; overflow: hidden; box-shadow: 0 20px 60px #000; }
+#game { width: 100%; height: 100%; min-height: 0; max-height: 100%; overflow: hidden; }
+#game > div, #game > .ejs_parent { width: 100%; height: 100%; min-height: 0; max-height: 100%; overflow: hidden; }
 #player-name-layer { position: absolute; z-index: 20; pointer-events: none; image-rendering: pixelated; }
 .spectator-view { position: absolute; z-index: 35; inset: 0; display: flex; flex-direction: column; background: #020916; }
 .spectator-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 60px; padding: 10px 14px; border-bottom: 1px solid #244d86; background: linear-gradient(90deg, #09265a, #071733); }
@@ -306,7 +306,7 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
 
 @media (max-width: 900px) {
   .game-layout { grid-template-columns: 1fr; }
-  .game-shell { min-height: 62vw; }
+  .game-shell { height: clamp(320px, 62vw, 650px); }
   .team-panel { order: -1; padding: 13px; }
   .team-heading { display: none; }
   .team-hud { grid-template-columns: repeat(2, 1fr); }
@@ -342,7 +342,7 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
 .touch-device .team-panel::-webkit-scrollbar { display: none; }
 .touch-device .team-hud { display: flex; gap: 7px; }
 .touch-device .player-status-row { min-width: 170px; padding-block: 9px; }
-.touch-device .game-shell { min-height: calc(100svh - 168px); border-width: 0; border-radius: 0; }
+.touch-device .game-shell { height: calc(100svh - 168px); min-height: 360px; border-width: 0; border-radius: 0; }
 .touch-device .game-bar {
   padding-top: max(8px, env(safe-area-inset-top));
   padding-right: max(14px, env(safe-area-inset-right));
@@ -352,7 +352,7 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
 @media (orientation: landscape) and (max-height: 600px) {
   .touch-device .game-bar { display: none; }
   .touch-device .game-layout { grid-template-columns: minmax(0, 1fr) min(225px, 27vw); min-height: 100svh; }
-  .touch-device .game-shell { min-height: 100svh; height: 100svh; }
+  .touch-device .game-shell { height: 100svh; min-height: 0; }
   .touch-device .team-panel { order: initial; border-width: 0 0 0 1px; }
   .touch-device .team-hud { display: grid; grid-template-columns: 1fr; }
   .touch-device .player-status-row { min-width: 0; }
@@ -378,7 +378,7 @@ button:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.48; }
   .game-bar { gap: 10px; }
   .connection-state span { display: none; }
   .game-layout { width: calc(100% - 12px); margin: 6px auto; }
-  .game-shell { min-height: 67vw; border-radius: 6px; }
+  .game-shell { height: clamp(280px, 67vw, 420px); border-radius: 6px; }
   .spectator-bar { align-items: stretch; flex-direction: column; }
   .spectator-bar label { justify-content: space-between; }
   .spectator-bar select { max-width: 68%; font-size: 16px; }
